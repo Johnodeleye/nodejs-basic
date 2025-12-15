@@ -1,0 +1,99 @@
+📁 Project Overview
+
+The project includes:
+
+A basic Express server
+
+Route separation
+
+Controller–service architecture
+
+Middleware with dummy token authentication
+
+Utility functions for random name and quote generation
+
+Request logging using Morgan
+
+🚀 Getting Started
+1️⃣ Clone the Repository
+git clone <your-github-repo-url>
+cd <project-folder>
+
+2️⃣ Install Dependencies
+npm install
+
+3️⃣ Start the Server
+npx nodemon server.js
+
+
+The server will start on:
+
+http://localhost:8000
+
+🧪 API Testing Tools
+
+To test the API endpoints, install any one of the following VS Code extensions:
+
+Thunder Client
+
+EchoAPI
+
+Postman (desktop app also works)
+
+These tools allow you to send requests and set headers easily.
+
+📌 Available Endpoints
+✅ Root Endpoint
+GET /
+
+
+Response:
+
+{
+  "message": "Nodejs Server is running now!",
+  "timestamp": "2025-01-01T00:00:00.000Z"
+}
+
+👤 Get Users (No Authentication Required)
+GET /users
+
+
+This endpoint returns a list of dummy users.
+
+📦 Get Products (Authentication Required)
+GET /products
+
+
+This endpoint requires authentication.
+
+🔐 Authentication Setup
+
+In your API testing tool:
+
+Header Key: Authorization
+
+Header Value:
+
+Bearer mysecrettoken
+
+
+If the token is missing or incorrect, access will be denied.
+
+🎲 Random Name & Quote (No Authentication Required)
+GET /random
+
+
+Response Example:
+
+{
+  "randomName": "Jordan",
+  "randomQuote": "Consistency beats talent"
+}
+
+
+Refreshing or calling this endpoint again will return a different random name and quote.
+
+✍️ Author
+
+P-DEV
+Software Developer
