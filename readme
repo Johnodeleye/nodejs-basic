@@ -16,8 +16,8 @@ Request logging using Morgan
 
 🚀 Getting Started
 1️⃣ Clone the Repository
-git clone <your-github-repo-url>
-cd <project-folder>
+git clone https://github.com/Johnodeleye/nodejs-basic
+cd nodejs-basic
 
 2️⃣ Install Dependencies
 npm install
