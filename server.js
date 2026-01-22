@@ -1,38 +1,120 @@
-const express = require("express")
-const morgan = require("morgan")
-const productRoutes = require("./routes/product.route")
-const userRoutes = require("./routes/user.route")
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const app = express();
 
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://centric-task.vercel.app',
+    'https://hubpost.community',
+    'https://www.hubpost.community'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
 
-const generateName = require("./utils/name.util")
-const generateQuote = require("./utils/quote.util")
+app.use(cors(corsOptions));
+app.use(express.json());
 
-const app = express()
+let isDBConnected = false;
 
-app.use(express.json())
-app.use(morgan("dev"))
+mongoose.connection.on('connecting', () => {
+  console.log('🔄 Attempting MongoDB connection...');
+});
 
-app.use("/api/users", userRoutes)
-app.use("/api/products", productRoutes)
+mongoose.connection.on('connected', () => {
+  isDBConnected = true;
+  console.log("✅ MongoDB connected to DB:", mongoose.connection.name);
+});
+
+mongoose.connection.on('error', (err) => {
+  isDBConnected = false;
+  console.error("❌ MongoDB connection error:", err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+  isDBConnected = false;
+  console.log("ℹ️ MongoDB disconnected");
+});
+
+const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) return;
+
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 30000,
+      connectTimeoutMS: 30000,
+      retryWrites: true,
+      w: 'majority'
+    });
+  } catch (error) {
+    process.exit(1);
+  }
+};
+
+app.use('/api/auth', require('./routes/authRoutes'));
 
 app.get("/", (req, res) => {
   res.json({
-    message: "Nodejs Server is running now!",
+    api: "running",
+    database: isDBConnected ? "connected" : "not connected",
+    connectionState: mongoose.STATES[mongoose.connection.readyState],
     timestamp: new Date().toISOString()
-  })
-})
+  });
+});
 
-//  route to get a random name and quote
-app.get("/random", (req, res) => {
-  const randomName = generateName()  
-  const randomQuote = generateQuote()  
-  
+app.get("/health", async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error("Database not connected");
+    }
+
+    await mongoose.connection.db.admin().ping();
+    const collections = await mongoose.connection.db.listCollections().toArray();
+
+    res.json({
+      status: "healthy",
+      dbName: mongoose.connection.name,
+      collections: collections.map(c => c.name),
+      connectionState: mongoose.STATES[mongoose.connection.readyState]
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "unhealthy",
+      error: err.message,
+      connectionState: mongoose.STATES[mongoose.connection.readyState],
+      uptime: process.uptime()
+    });
+  }
+});
+
+app.get('/debug-connection', (req, res) => {
   res.json({
-    randomName,
-    randomQuote
-  })
-})
+    connectionString: process.env.MONGODB_URI 
+      ? process.env.MONGODB_URI.replace(/\/\/[^@]+@/, '//****:****@')
+      : 'missing',
+    mongooseState: mongoose.STATES[mongoose.connection.readyState],
+    mongooseVersion: mongoose.version
+  });
+});
 
-app.listen(8000, () => {
-  console.log("Server running on port 8000")
-})
+const PORT = process.env.PORT || 5000;
+
+const startServer = async () => {
+  await connectDB();
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+};
+
+startServer().catch((err) => {
+  process.exit(1);
+});
+
+process.on('SIGINT', async () => {
+  await mongoose.connection.close();
+  process.exit(0);
+});
