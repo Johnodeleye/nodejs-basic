@@ -39,7 +39,11 @@ const authController = {
         return res.status(400).json({ error: 'Username and password required' });
       }
 
-      const user = await User.findOne({ username }).select('+password');
+      const isEmail = username.includes('@');
+      
+      const query = isEmail ? { email: username } : { username: username };
+      
+      const user = await User.findOne(query).select('+password');
       
       if (!user) {
         return res.status(401).json({ error: 'Invalid credentials' });

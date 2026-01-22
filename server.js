@@ -7,6 +7,7 @@ const app = express();
 const corsOptions = {
   origin: [
     'http://localhost:3000',
+    'http://localhost:3001',
     'https://centric-task.vercel.app',
     'https://hubpost.community',
     'https://www.hubpost.community'
