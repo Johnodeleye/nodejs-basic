@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const app = express();
+const morgan = require("morgan");
 
 const corsOptions = {
   origin: [
@@ -18,6 +19,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(morgan("dev"));
 
 let isDBConnected = false;
 
@@ -57,6 +59,7 @@ const connectDB = async () => {
 };
 
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/email', require('./routes/emailRoutes'));
 
 app.get("/", (req, res) => {
   res.json({
