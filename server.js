@@ -10,9 +10,7 @@ const corsOptions = {
   origin: [
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://centric-task.vercel.app',
-    'https://hubpost.community',
-    'https://www.hubpost.community'
+    'https://808-mailer.vercel.app'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -21,6 +19,14 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan("dev"));
+
+mongoose.connection.on('connected', () => {
+  console.log("✅ MongoDB Connected Successfully");
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error("❌ MongoDB Connection Error:", err.message);
+});
 
 const connectDB = async () => {
   if (mongoose.connection.readyState >= 1) return;
@@ -34,7 +40,7 @@ const connectDB = async () => {
       w: 'majority'
     });
   } catch (error) {
-    console.error("DB Connection Error:", error.message);
+    console.error("❌ DB Connection Error:", error.message);
   }
 };
 
@@ -73,5 +79,13 @@ app.get("/health", async (req, res) => {
     });
   }
 });
+
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    connectDB();
+  });
+}
 
 module.exports = app;
