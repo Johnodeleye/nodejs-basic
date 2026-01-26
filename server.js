@@ -10,7 +10,8 @@ const corsOptions = {
   origin: [
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://808-mailer.vercel.app'
+    'https://808-mailer.vercel.app',
+    'https://www.808mailer.space'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
