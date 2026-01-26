@@ -6,18 +6,14 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const emailController = {
   sendEmail: async (req, res) => {
     try {
-      const { to, bcc, subject, message, html, attachments, senderName } = req.body;
+      const { to, bcc, subject, message, html, attachments } = req.body;
       
       if (!to || !to.length) {
         return res.status(400).json({ error: 'Recipients are required' });
       }
 
-      if (!senderName || senderName.trim() === '') {
-        return res.status(400).json({ error: 'Sender name is required' });
-      }
-
       const emailData = {
-        from: `${senderName.trim()} <${process.env.RESEND_FROM_EMAIL}>`,
+        from: `${req.user.username} <${process.env.RESEND_FROM_EMAIL}>`,
         to: to,
         subject: subject || 'No subject',
         text: message || '',
@@ -55,8 +51,7 @@ const emailController = {
         attachmentsCount: attachments?.length || 0,
         status: 'sent',
         resendId: data.id,
-        totalRecipients: to.length + (bcc?.length || 0),
-        senderName: senderName.trim()
+        totalRecipients: to.length + (bcc?.length || 0)
       });
 
       res.json({
@@ -134,7 +129,7 @@ const emailController = {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .select('to subject status createdAt totalRecipients senderName');
+        .select('to subject status createdAt totalRecipients');
 
       const total = await Email.countDocuments({ userId: req.user.id });
 
