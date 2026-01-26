@@ -38,6 +38,10 @@ const emailSchema = new mongoose.Schema({
   totalRecipients: {
     type: Number,
     required: true
+  },
+  senderName: {
+    type: String,
+    required: true
   }
 }, { timestamps: true });
 
