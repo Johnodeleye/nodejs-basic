@@ -72,39 +72,21 @@ const emailController = {
 
   getStats: async (req, res) => {
     try {
-      const totalSentResult = await Email.aggregate([
-        { $match: { status: 'sent' } },
-        { $group: { _id: null, total: { $sum: "$totalRecipients" } } }
-      ]);
-      const totalSent = totalSentResult.length > 0 ? totalSentResult[0].total : 0;
+      const totalSent = await Email.countDocuments({ status: 'sent' });
       
       const today = new Date();
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      
-      const thisMonthResult = await Email.aggregate([
-        { 
-          $match: { 
-            status: 'sent',
-            createdAt: { $gte: firstDayOfMonth }
-          }
-        },
-        { $group: { _id: null, total: { $sum: "$totalRecipients" } } }
-      ]);
-      const thisMonthSent = thisMonthResult.length > 0 ? thisMonthResult[0].total : 0;
+      const thisMonthSent = await Email.countDocuments({
+        status: 'sent',
+        createdAt: { $gte: firstDayOfMonth }
+      });
 
       const lastMonthFirstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       const lastMonthLastDay = new Date(today.getFullYear(), today.getMonth(), 0);
-      
-      const lastMonthResult = await Email.aggregate([
-        { 
-          $match: { 
-            status: 'sent',
-            createdAt: { $gte: lastMonthFirstDay, $lte: lastMonthLastDay }
-          }
-        },
-        { $group: { _id: null, total: { $sum: "$totalRecipients" } } }
-      ]);
-      const lastMonthSent = lastMonthResult.length > 0 ? lastMonthResult[0].total : 0;
+      const lastMonthSent = await Email.countDocuments({
+        status: 'sent',
+        createdAt: { $gte: lastMonthFirstDay, $lte: lastMonthLastDay }
+      });
 
       const increase = lastMonthSent > 0 
         ? `+${Math.round(((thisMonthSent - lastMonthSent) / lastMonthSent) * 100)}%` 
@@ -113,28 +95,16 @@ const emailController = {
       const PLAN_LIMIT = 50000;
       const remaining = Math.max(0, PLAN_LIMIT - thisMonthSent);
 
-      const userThisMonthResult = await Email.aggregate([
-        { 
-          $match: { 
-            userId: req.user.id,
-            status: 'sent',
-            createdAt: { $gte: firstDayOfMonth }
-          }
-        },
-        { $group: { _id: null, total: { $sum: "$totalRecipients" } } }
-      ]);
-      const userThisMonthSent = userThisMonthResult.length > 0 ? userThisMonthResult[0].total : 0;
+      const userThisMonthSent = await Email.countDocuments({
+        userId: req.user.id,
+        status: 'sent',
+        createdAt: { $gte: firstDayOfMonth }
+      });
 
-      const userTotalResult = await Email.aggregate([
-        { 
-          $match: { 
-            userId: req.user.id, 
-            status: 'sent' 
-          }
-        },
-        { $group: { _id: null, total: { $sum: "$totalRecipients" } } }
-      ]);
-      const userTotalSent = userTotalResult.length > 0 ? userTotalResult[0].total : 0;
+      const userTotalSent = await Email.countDocuments({ 
+        userId: req.user.id, 
+        status: 'sent' 
+      });
 
       res.json({
         totalSent,
