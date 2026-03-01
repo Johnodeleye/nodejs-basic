@@ -1,12 +1,15 @@
 const Email = require('../models/Email');
 const { Resend } = require('resend');
+const linkProcessor = require('../utils/linkProcessor');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const emailController = {
   sendEmail: async (req, res) => {
     try {
-      const { to, bcc, subject, message, html, attachments, senderName } = req.body;
+      const { to, bcc, subject, message, html, attachments, senderName, links } = req.body;
+      
+      console.log('Received request with links:', JSON.stringify(links, null, 2));
       
       if (!to || !to.length) {
         return res.status(400).json({ error: 'Recipients are required' });
@@ -16,19 +19,31 @@ const emailController = {
         return res.status(400).json({ error: 'Sender name is required' });
       }
 
+      let finalHtml = html;
+      
+      if (html && links && links.length > 0) {
+        console.log('Processing links in HTML...');
+        finalHtml = await linkProcessor.processLinks(html, links);
+        console.log('Links processed successfully');
+        console.log('Final HTML preview:', finalHtml.substring(0, 500));
+      }
+
       const emailData = {
         from: `${senderName.trim()} <${process.env.RESEND_FROM_EMAIL}>`,
         to: to,
         subject: subject || 'No subject',
-        text: message || '',
       };
+
+      if (message) {
+        emailData.text = message;
+      }
+
+      if (finalHtml) {
+        emailData.html = finalHtml;
+      }
 
       if (bcc && bcc.length > 0) {
         emailData.bcc = bcc;
-      }
-
-      if (html) {
-        emailData.html = html;
       }
 
       if (attachments && attachments.length > 0) {
@@ -39,9 +54,11 @@ const emailController = {
         }));
       }
 
+      console.log('Sending email via Resend...');
       const { data, error } = await resend.emails.send(emailData);
 
       if (error) {
+        console.error('Resend error:', error);
         return res.status(500).json({ error: error.message });
       }
 
@@ -51,7 +68,7 @@ const emailController = {
         bcc: bcc || [],
         subject: subject,
         message: message,
-        html: html,
+        html: finalHtml,
         attachmentsCount: attachments?.length || 0,
         status: 'sent',
         resendId: data.id,
@@ -63,9 +80,11 @@ const emailController = {
         success: true,
         message: `Email sent to ${emailRecord.totalRecipients} recipients`,
         emailId: emailRecord._id,
-        resendId: data.id
+        resendId: data.id,
+        linksProcessed: links?.length || 0
       });
     } catch (error) {
+      console.error('Send email error:', error);
       res.status(500).json({ error: error.message });
     }
   },
