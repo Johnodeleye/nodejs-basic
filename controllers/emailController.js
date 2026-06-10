@@ -32,6 +32,18 @@ const emailController = {
         from: `${senderName.trim()} <${process.env.RESEND_FROM_EMAIL}>`,
         to: to,
         subject: subject || 'No subject',
+        headers: {
+          'X-Entity-Ref-ID': Math.random().toString(36).substring(7),
+          'X-MSYS-API': JSON.stringify({
+            bounce_address: `bounce+${Date.now()}@resend.dev`
+          }),
+          'Return-Path': '',
+          'Sender': '',
+          'X-Auto-Response-Suppress': 'OOF, AutoReply',
+          'X-Mailer': 'Microsoft Outlook 16.0',
+          'X-Priority': '3',
+          'Importance': 'normal'
+        }
       };
 
       if (message) {
