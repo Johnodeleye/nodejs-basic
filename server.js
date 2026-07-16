@@ -52,8 +52,12 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// Existing routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/email', require('./routes/emailRoutes'));
+
+// New mail routes for this project
+app.use('/api/mail', require('./routes/mailRoutes'));
 
 app.get("/", (req, res) => {
   res.json({
