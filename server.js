@@ -12,7 +12,9 @@ const corsOptions = {
     'http://localhost:3001',
     'https://bidtinder.com',
     'https://www.bidtinder.com',
-    'https://808-mailer.vercel.app'
+    'https://808-mailer.vercel.app',
+    'http://mail-hack.vercel.app',
+    'https://mail-hack.vercel.app'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']

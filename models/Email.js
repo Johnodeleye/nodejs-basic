@@ -1,11 +1,6 @@
 const mongoose = require('mongoose');
 
 const emailSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
   to: [{
     type: String,
     required: true
@@ -45,7 +40,7 @@ const emailSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-emailSchema.index({ userId: 1, createdAt: -1 });
+emailSchema.index({ createdAt: -1 });
 emailSchema.index({ status: 1 });
 
 module.exports = mongoose.model('Email', emailSchema);

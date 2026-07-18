@@ -9,8 +9,6 @@ const emailController = {
     try {
       const { to, bcc, subject, message, html, attachments, senderName, links } = req.body;
       
-      console.log('Received request with links:', JSON.stringify(links, null, 2));
-      
       if (!to || !to.length) {
         return res.status(400).json({ error: 'Recipients are required' });
       }
@@ -22,10 +20,7 @@ const emailController = {
       let finalHtml = html;
       
       if (html && links && links.length > 0) {
-        console.log('Processing links in HTML...');
         finalHtml = await linkProcessor.processLinks(html, links);
-        console.log('Links processed successfully');
-        console.log('Final HTML preview:', finalHtml.substring(0, 500));
       }
 
       const emailData = {
@@ -74,8 +69,9 @@ const emailController = {
         return res.status(500).json({ error: error.message });
       }
 
+      const totalRecipients = (to?.length || 0) + (bcc?.length || 0);
+
       const emailRecord = await Email.create({
-        userId: req.user.id,
         to: to,
         bcc: bcc || [],
         subject: subject,
@@ -84,13 +80,13 @@ const emailController = {
         attachmentsCount: attachments?.length || 0,
         status: 'sent',
         resendId: data.id,
-        totalRecipients: to.length + (bcc?.length || 0),
+        totalRecipients: totalRecipients,
         senderName: senderName.trim()
       });
 
       res.json({
         success: true,
-        message: `Email sent to ${emailRecord.totalRecipients} recipients`,
+        message: `Email sent to ${totalRecipients} recipients`,
         emailId: emailRecord._id,
         resendId: data.id,
         linksProcessed: links?.length || 0
@@ -123,62 +119,9 @@ const emailController = {
       ]);
       const thisMonthSent = thisMonthResult.length > 0 ? thisMonthResult[0].total : 0;
 
-      const lastMonthFirstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      const lastMonthLastDay = new Date(today.getFullYear(), today.getMonth(), 0);
-      
-      const lastMonthResult = await Email.aggregate([
-        { 
-          $match: { 
-            status: 'sent',
-            createdAt: { $gte: lastMonthFirstDay, $lte: lastMonthLastDay }
-          }
-        },
-        { $group: { _id: null, total: { $sum: "$totalRecipients" } } }
-      ]);
-      const lastMonthSent = lastMonthResult.length > 0 ? lastMonthResult[0].total : 0;
-
-      const increase = lastMonthSent > 0 
-        ? `+${Math.round(((thisMonthSent - lastMonthSent) / lastMonthSent) * 100)}%` 
-        : thisMonthSent > 0 ? '+100%' : '+0%';
-
-      const PLAN_LIMIT = 50000;
-      const remaining = Math.max(0, PLAN_LIMIT - thisMonthSent);
-
-      const userThisMonthResult = await Email.aggregate([
-        { 
-          $match: { 
-            userId: req.user.id,
-            status: 'sent',
-            createdAt: { $gte: firstDayOfMonth }
-          }
-        },
-        { $group: { _id: null, total: { $sum: "$totalRecipients" } } }
-      ]);
-      const userThisMonthSent = userThisMonthResult.length > 0 ? userThisMonthResult[0].total : 0;
-
-      const userTotalResult = await Email.aggregate([
-        { 
-          $match: { 
-            userId: req.user.id, 
-            status: 'sent' 
-          }
-        },
-        { $group: { _id: null, total: { $sum: "$totalRecipients" } } }
-      ]);
-      const userTotalSent = userTotalResult.length > 0 ? userTotalResult[0].total : 0;
-
       res.json({
         totalSent,
-        thisMonthSent,
-        increase,
-        remaining,
-        userTotalSent,
-        userThisMonthSent,
-        plan: {
-          name: 'Pro',
-          limit: PLAN_LIMIT,
-          usage: thisMonthSent
-        }
+        thisMonthSent
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -191,13 +134,13 @@ const emailController = {
       const limit = parseInt(req.query.limit) || 20;
       const skip = (page - 1) * limit;
 
-      const emails = await Email.find({ userId: req.user.id })
+      const emails = await Email.find({})
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .select('to subject status createdAt totalRecipients senderName');
 
-      const total = await Email.countDocuments({ userId: req.user.id });
+      const total = await Email.countDocuments({});
 
       res.json({
         emails,

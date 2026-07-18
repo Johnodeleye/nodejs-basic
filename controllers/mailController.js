@@ -1,4 +1,5 @@
 const Mail = require('../models/Mail');
+const Email = require('../models/Email');
 const transporter = require('../utils/emailTransporter');
 
 const mailController = {
@@ -27,12 +28,11 @@ const mailController = {
       }
 
       const mailOptions = {
-        from: `${fromName.trim()} <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
+        from: `${fromName.trim()} <${process.env.SMTP_USER}>`,
         to: to.trim(),
         bcc: bcc,
         subject: subject.trim(),
-        text: message,
-        html: message.replace(/\n/g, '<br>')
+        text: message
       };
 
       if (attachments && attachments.length > 0) {
@@ -53,7 +53,6 @@ const mailController = {
         bcc: bcc,
         subject: subject.trim(),
         message: message,
-        html: message.replace(/\n/g, '<br>'),
         attachmentsCount: attachments?.length || 0,
         status: 'sent',
         totalRecipients: bcc.length,
@@ -126,12 +125,11 @@ const mailController = {
 
         try {
           const mailOptions = {
-            from: `${fromName.trim()} <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
+            from: `${fromName.trim()} <${process.env.SMTP_USER}>`,
             to: to.trim(),
             bcc: batch,
             subject: subject.trim(),
-            text: message,
-            html: message.replace(/\n/g, '<br>')
+            text: message
           };
 
           if (attachments && attachments.length > 0) {
@@ -157,7 +155,6 @@ const mailController = {
         bcc: bcc,
         subject: subject.trim(),
         message: message,
-        html: message.replace(/\n/g, '<br>'),
         attachmentsCount: attachments?.length || 0,
         status: sentCount > 0 ? 'sent' : 'failed',
         totalRecipients: bcc.length,
@@ -183,22 +180,31 @@ const mailController = {
 
   getStats: async (req, res) => {
     try {
-      const totalSentResult = await Mail.aggregate([
+      const mailSentResult = await Mail.aggregate([
         { $match: { status: 'sent' } },
         { $group: { _id: null, total: { $sum: "$sentCount" } } }
       ]);
-      const totalSent = totalSentResult.length > 0 ? totalSentResult[0].total : 0;
+      const mailSent = mailSentResult.length > 0 ? mailSentResult[0].total : 0;
 
-      const totalFailedResult = await Mail.aggregate([
+      const mailFailedResult = await Mail.aggregate([
         { $match: { status: { $in: ['sent', 'failed'] } } },
         { $group: { _id: null, total: { $sum: "$failedCount" } } }
       ]);
-      const totalFailed = totalFailedResult.length > 0 ? totalFailedResult[0].total : 0;
+      const mailFailed = mailFailedResult.length > 0 ? mailFailedResult[0].total : 0;
+
+      const emailSentResult = await Email.aggregate([
+        { $match: { status: 'sent' } },
+        { $group: { _id: null, total: { $sum: "$totalRecipients" } } }
+      ]);
+      const emailSent = emailSentResult.length > 0 ? emailSentResult[0].total : 0;
+
+      const totalSent = mailSent + emailSent;
+      const totalFailed = mailFailed;
 
       const today = new Date();
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-      const thisMonthSentResult = await Mail.aggregate([
+      const mailThisMonthResult = await Mail.aggregate([
         {
           $match: {
             status: 'sent',
@@ -207,8 +213,20 @@ const mailController = {
         },
         { $group: { _id: null, total: { $sum: "$sentCount" } } }
       ]);
-      const thisMonthSent = thisMonthSentResult.length > 0 ? thisMonthSentResult[0].total : 0;
+      const mailThisMonth = mailThisMonthResult.length > 0 ? mailThisMonthResult[0].total : 0;
 
+      const emailThisMonthResult = await Email.aggregate([
+        {
+          $match: {
+            status: 'sent',
+            createdAt: { $gte: firstDayOfMonth }
+          }
+        },
+        { $group: { _id: null, total: { $sum: "$totalRecipients" } } }
+      ]);
+      const emailThisMonth = emailThisMonthResult.length > 0 ? emailThisMonthResult[0].total : 0;
+
+      const thisMonthSent = mailThisMonth + emailThisMonth;
       const allTimeTotal = totalSent + totalFailed;
 
       res.json({

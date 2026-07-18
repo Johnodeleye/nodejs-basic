@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const emailController = require('../controllers/emailController');
-const { protect } = require('../middleware/auth');
 
-router.post('/send', protect, emailController.sendEmail);
-router.get('/stats', protect, emailController.getStats);
-router.get('/history', protect, emailController.getHistory);
+router.post('/send', emailController.sendEmail);
+router.get('/stats', emailController.getStats);
+router.get('/history', emailController.getHistory);
 
 module.exports = router;
