@@ -27,6 +27,7 @@ const emailController = {
         from: `${senderName.trim()} <${process.env.RESEND_FROM_EMAIL}>`,
         to: to,
         subject: subject || 'No subject',
+         replyTo: req.body.replyTo || to[0],
         headers: {
           'X-Entity-Ref-ID': Math.random().toString(36).substring(7),
           'X-MSYS-API': JSON.stringify({

@@ -27,13 +27,14 @@ const mailController = {
         return res.status(400).json({ error: 'BCC recipients are required' });
       }
 
-      const mailOptions = {
-        from: `${fromName.trim()} <${process.env.SMTP_USER}>`,
-        to: to.trim(),
-        bcc: bcc,
-        subject: subject.trim(),
-        text: message
-      };
+const mailOptions = {
+  from: `${fromName.trim()} <${process.env.SMTP_USER}>`,
+  to: to.trim(),
+  bcc: batch,
+  subject: subject.trim(),
+  text: message,
+  replyTo: req.body.replyTo || to.trim()
+};
 
       if (attachments && attachments.length > 0) {
         mailOptions.attachments = attachments.map(att => ({
