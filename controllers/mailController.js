@@ -1,11 +1,14 @@
 const Mail = require('../models/Mail');
 const Email = require('../models/Email');
 const transporter = require('../utils/emailTransporter');
+const { Resend } = require('resend');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const mailController = {
   sendEmail: async (req, res) => {
     try {
-      const { fromName, to, bcc, subject, message, attachments, totalEmails } = req.body;
+      const { fromName, to, bcc, subject, message, attachments, replyTo } = req.body;
 
       if (!fromName || fromName.trim() === '') {
         return res.status(400).json({ error: 'Sender name is required' });
@@ -27,26 +30,58 @@ const mailController = {
         return res.status(400).json({ error: 'BCC recipients are required' });
       }
 
-const mailOptions = {
-  from: `${fromName.trim()} <${process.env.SMTP_USER}>`,
-  to: to.trim(),
-  bcc: batch,
-  subject: subject.trim(),
-  text: message,
-  replyTo: req.body.replyTo || to.trim()
-};
+      const emailData = {
+        from: `${fromName.trim()} <${process.env.RESEND_FROM_EMAIL}>`,
+        to: to.trim(),
+        bcc: bcc,
+        subject: subject.trim(),
+        text: message,
+        replyTo: replyTo || to.trim(),
+        headers: {
+          'X-Entity-Ref-ID': Math.random().toString(36).substring(7),
+          'X-MSYS-API': JSON.stringify({
+            bounce_address: `bounce+${Date.now()}@resend.dev`
+          }),
+          'Return-Path': '',
+          'Sender': '',
+          'X-Auto-Response-Suppress': 'OOF, AutoReply',
+          'X-Mailer': 'Microsoft Outlook 16.0',
+          'X-Priority': '3',
+          'Importance': 'normal'
+        }
+      };
 
       if (attachments && attachments.length > 0) {
-        mailOptions.attachments = attachments.map(att => ({
+        emailData.attachments = attachments.map(att => ({
           filename: att.name,
           content: att.content,
           contentType: att.type
         }));
       }
 
-      console.log('Sending email via Nodemailer...');
-      
-      const info = await transporter.sendMail(mailOptions);
+      console.log('Sending email via Resend...');
+      const { data, error } = await resend.emails.send(emailData);
+
+      if (error) {
+        console.error('Resend error:', error);
+        
+        const mailRecord = await Mail.create({
+          fromName: fromName.trim(),
+          to: to.trim(),
+          bcc: bcc,
+          subject: subject.trim(),
+          message: message,
+          attachmentsCount: attachments?.length || 0,
+          status: 'failed',
+          totalRecipients: bcc.length,
+          sentCount: 0,
+          failedCount: bcc.length,
+          failedEmails: bcc,
+          completedAt: new Date()
+        });
+
+        return res.status(500).json({ error: error.message });
+      }
 
       const mailRecord = await Mail.create({
         fromName: fromName.trim(),
@@ -67,24 +102,28 @@ const mailOptions = {
         success: true,
         message: `Email sent to ${bcc.length} recipients`,
         mailId: mailRecord._id,
-        messageId: info.messageId
+        messageId: data.id
       });
     } catch (error) {
       console.error('Send email error:', error);
       
-      const mailRecord = await Mail.create({
-        fromName: req.body.fromName || 'Unknown',
-        to: req.body.to || '',
-        bcc: req.body.bcc || [],
-        subject: req.body.subject || '',
-        message: req.body.message || '',
-        status: 'failed',
-        totalRecipients: req.body.bcc?.length || 0,
-        sentCount: 0,
-        failedCount: req.body.bcc?.length || 0,
-        failedEmails: req.body.bcc || [],
-        completedAt: new Date()
-      });
+      try {
+        const mailRecord = await Mail.create({
+          fromName: req.body.fromName || 'Unknown',
+          to: req.body.to || '',
+          bcc: req.body.bcc || [],
+          subject: req.body.subject || '',
+          message: req.body.message || '',
+          status: 'failed',
+          totalRecipients: req.body.bcc?.length || 0,
+          sentCount: 0,
+          failedCount: req.body.bcc?.length || 0,
+          failedEmails: req.body.bcc || [],
+          completedAt: new Date()
+        });
+      } catch (dbError) {
+        console.error('DB Error:', dbError);
+      }
 
       res.status(500).json({ error: error.message });
     }
