@@ -2,6 +2,8 @@ const Mail = require('../models/Mail');
 const Email = require('../models/Email');
 const transporter = require('../utils/emailTransporter');
 
+const MANUAL_TOTAL_SENT = 500000;
+
 const mailController = {
   sendBatch: async (req, res) => {
     try {
@@ -112,7 +114,8 @@ const mailController = {
       ]);
       const emailSent = emailSentResult.length > 0 ? emailSentResult[0].total : 0;
 
-      const totalSent = mailSent + emailSent;
+      let totalSent = mailSent + emailSent;
+      totalSent += MANUAL_TOTAL_SENT;
       const totalFailed = mailFailed;
 
       const today = new Date();
@@ -140,7 +143,8 @@ const mailController = {
       ]);
       const emailThisMonth = emailThisMonthResult.length > 0 ? emailThisMonthResult[0].total : 0;
 
-      const thisMonthSent = mailThisMonth + emailThisMonth;
+      let thisMonthSent = mailThisMonth + emailThisMonth;
+      thisMonthSent += MANUAL_TOTAL_SENT;
       const allTimeTotal = totalSent + totalFailed;
 
       res.json({
