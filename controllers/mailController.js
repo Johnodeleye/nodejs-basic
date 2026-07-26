@@ -181,6 +181,16 @@ const mailController = {
       console.error('Get history error:', error);
       res.status(500).json({ error: error.message });
     }
+  },
+
+  clearStats: async (req, res) => {
+    try {
+      await Mail.deleteMany({});
+      res.json({ success: true, message: 'All mail stats cleared successfully' });
+    } catch (error) {
+      console.error('Clear stats error:', error);
+      res.status(500).json({ error: error.message });
+    }
   }
 };
 

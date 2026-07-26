@@ -153,6 +153,16 @@ const emailController = {
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
+  },
+
+  clearStats: async (req, res) => {
+    try {
+      await Email.deleteMany({});
+      res.json({ success: true, message: 'All email stats cleared successfully' });
+    } catch (error) {
+      console.error('Clear stats error:', error);
+      res.status(500).json({ error: error.message });
+    }
   }
 };
 
